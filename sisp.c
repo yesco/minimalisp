@@ -63,6 +63,10 @@ lisp eval(lisp e, lisp env) {
   if (!consp(e)) return var(e, env, e);
   lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
   switch((long)car(e)) {
+  case 0x57: return mknum(num(car(r)) + num(car(cdr(r))));
+  case 0x59: return mknum(num(car(r)) - num(car(cdr(r))));
+  case 0x55: return mknum(num(car(r)) * num(car(cdr(r))));
+  case 0x5f: return mknum(num(car(r)) / num(car(cdr(r))));
   case 0x31e1e5: return car(car(r));
   case 0x31e4e5: return cdr(car(r));
   case 0x18f7eee7: return cons(car(r), car(cdr(r)));
@@ -85,7 +89,7 @@ int main(int argc, char** argv) {
 
   lisp x= nil;
   x= mknum(42);
-  
+  x= cons( (void*)0x55, cons( mknum(111), cons(mknum(3), nil)));
   princ(x);
   putchar('\n');
   princ(eval(x, env));
