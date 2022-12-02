@@ -16,7 +16,6 @@ lisp tok() {
   do { r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
   } while(({int x=c;c=0;isalnum(x);}) && isalnum((c=fgetc(stdin))));
   if (c && !isalnum(c)) ungetc(c, stdin);
-  //printf("<%ld>", r);
   // map nil to 0
   return r==0x3769D9/2 ? 0 : mknum(r);
 }
@@ -35,7 +34,7 @@ lisp cons(lisp a, lisp d) {
   return c;
 }
 
-lisp eq(lisp a, lisp b) { return (void*)(long)(a==b?1:0); }
+lisp eq(lisp a, lisp b) { return (void*)(long)(a==b?2:0); }
        
 lisp assoc(lisp v, lisp l) {
   while(consp(l) && !eq(v, car(car(l)))) l= cdr(l);
