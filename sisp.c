@@ -11,15 +11,12 @@ lisp nil= NULL;
 lisp mknum(long n) { return (void*)(n*2+1); }
 long num(lisp n) { return (L(n)-1)/2; }
 
-typedef struct cons {
-  lisp car, cdr;
-} *Cons;
+typedef struct cons { lisp car, cdr; } *Cons;
 
 lisp consp(lisp c) { return (void*)L(L(c && !(L(c)&7))); }
 lisp car(Cons c) { return consp(c) ? c->car : 0; }
 lisp cdr(Cons c) { return consp(c) ? c->cdr : 0; }
 lisp cons(lisp a, lisp d) {
-  return memcpy(malloc(sizeof(struct cons)), &(struct cons){a,d}, sizeof(struct cons));
   Cons c= malloc(sizeof(*c));
   c->car= a; c->cdr= d;
   return c;
@@ -47,19 +44,20 @@ lisp rd() {
 }
 
 lisp eq(lisp a, lisp b) { return (void*)(long)(a==b?2:0); }
-       
+lisp equal(lisp a, lisp b) { return (void*)L(L(eq(a, b) || equal(car(a), car(b)) && equal(cdr(a), cdr(b)))); }
+
 lisp assoc(lisp v, lisp l) {
   while(consp(l) && !eq(v, car(car(l)))) l= cdr(l);
   return car(l);
 }
 
-lisp princ(lisp e) {
+lisp princ(lisp e) { lisp x= e;
   if (!e) return printf("nil"),e;
   if (!consp(e)) return printf("%ld", num(e)),e;
   putchar('('); do {
-    princ(car(e)); e= cdr(e); e && putchar(' ');
-  } while (e);
-  if (e) printf(" . "),princ(e);
+    princ(car(x)); x= cdr(x); x && putchar(' ');
+  } while (consp(x));
+  if (x) printf(". "),princ(x);
   return putchar(')'),e;
 }
 
@@ -86,7 +84,7 @@ lisp eval(lisp e, lisp env) {
   case 0x31e4e5: return cdr(car(r));
 
 #define B(CD,F) case CD: return F(car(r), car(cdr(r)))
-  B(0x18f7eee7, cons); B(0x65e3, eq); // B(0xcbc7ae1d9, equal);
+  B(0x18f7eee7, cons); B(0x65e3, eq); B(0xcbc7ae1d9, equal);
   B(0x3cf9efc7, assoc); B(0x197b61d9, eval); //B(0x3c386cf3, apply);
 
   case 0x7bf773e1: return consp(car(r));
@@ -127,7 +125,7 @@ int main(int argc, char** argv) {
   fputc('>', stderr);
   lisp t;
   while((t=rd())) {
-    printf("%ld 0x%lx\n", L(t), L(t));
+    printf("( %ld 0x%lx )\n", L(t), L(t));
     princ(t); putchar('\n');
     princ(eval(t, env));
     putchar('\n');
