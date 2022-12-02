@@ -11,7 +11,7 @@ long tok() {
     r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
   }
   ungetc(c, stdin);
-  return r*2+1;
+  return r==0x69d9/2 ? 0 : r*2+1;
 }
 
 typedef void* lisp;
@@ -58,15 +58,15 @@ lisp eval(lisp e, lisp env) {
   if (!consp(e)) return var(e, env, e);
   lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
   switch((long)car(e)) {
-  case 0x30f2: return car(car(r));
-  case 0x3272: return cdr(car(r));
-  case 0x1bf773: return cons(car(r), car(cdr(r)));
-  case -0xebbfa65: return car(r);
-  case 0x71: return eq(car(r), car(cdr(r)));
-  case 0xe3d70ec: // equal
-  case 0x30f0: // map
-  case -0x66: // if
-  case 0x34ec: // nil
+  case 0x61e5: return car(car(r));
+  case 0x64e5: return cdr(car(r));
+  case 0x37eee7: return cons(car(r), car(cdr(r)));
+  case -0x1d77f4cb: return car(r);
+  case 0xe3: return eq(car(r), car(cdr(r)));
+  case 0x1c7ae1d9: // equal
+  case 0x61e1: // map
+  case -0xcd: // if
+  case 0x69d9: // nil
   case 't': // t
   default: printf("ERROR: "); princ(e); break;
   }
@@ -82,8 +82,6 @@ int main(int argc, char** argv) {
   putchar('\n');
   princ(eval(x, nil));
   putchar('\n');
-
-  exit(3);
 
   long t;
   while((t=tok())) {
