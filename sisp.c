@@ -12,14 +12,11 @@ long num(lisp n) { return L(n)/2; }
 lisp tok() {
   int c= ' ';
   while(isspace(c)) c= getc(stdin);
-  ungetc(c, stdin);
   long r= 0;
-  while((c=fgetc(stdin))!=EOF) {
-    if (isspace(c)||c=='('||c==')') break;
-    r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
-  }
-  ungetc(c, stdin);
-  printf("<%ld>", r);
+  do { r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
+  } while(({int x=c;c=0;isalnum(x);}) && isalnum((c=fgetc(stdin))));
+  if (c && !isalnum(c)) ungetc(c, stdin);
+  //printf("<%ld>", r);
   // map nil to 0
   return r==0x3769D9/2 ? 0 : mknum(r);
 }
