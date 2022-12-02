@@ -9,7 +9,7 @@ lisp nil= NULL;
 #define L(a) ((long)a)
 
 lisp mknum(long n) { return (void*)(n*2+1); }
-long num(lisp n) { return L(n)/2; }
+long num(lisp n) { return (L(n)-1)/2; }
 
 typedef struct cons {
   lisp car, cdr;
@@ -78,22 +78,34 @@ lisp eval(lisp e, lisp env) {
   if (!consp(e)) return var(e, env, e);
   lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
   switch((long)car(e)) {
-  case 0x57: return mknum(num(car(r)) + num(car(cdr(r))));
-  case 0x59: return mknum(num(car(r)) - num(car(cdr(r))));
-  case 0x55: return mknum(num(car(r)) * num(car(cdr(r))));
-  case 0x5f: return mknum(num(car(r)) / num(car(cdr(r))));
+
+#define M(CD,OP) case CD: return mknum(num(car(r)) OP num(car(cdr(r))))
+  M(0x57, +); M(0x5b, -); M(0x55, *); M(0x5f, /);
+
   case 0x31e1e5: return car(car(r));
   case 0x31e4e5: return cdr(car(r));
-  case 0x18f7eee7: return cons(car(r), car(cdr(r)));
-  case -0xe3d77f4cb: return car(r);
-  case 0xcbc7ae1d9: // equal
-  case 0x65e3: return eq(car(r), car(cdr(r)));
+
+#define B(CD,F) case CD: return F(car(r), car(cdr(r)))
+  B(0x18f7eee7, cons); B(0x65e3, eq); // B(0xcbc7ae1d9, equal);
+  B(0x3cf9efc7, assoc); B(0x197b61d9, eval); //B(0x3c386cf3, apply);
+
+  case 0x7bf773e1: return consp(car(r));
+  case 0x1cb2e1c9: return rd();
+  case 0x1cb4eee9: princ(car(r)); // print
+  case 0xbcb872d3: return putchar('\n'),nil;
+  case 0x1cb4eec7: return princ(car(r));
+
   case 0x36e1e1: // map
+
+  case -0xe3d77f4cb: return car(r); // quote
   case -0x69cd: // if
+
   default: printf("ERROR: "); princ(e); break;
   }
   return e;
 }
+
+// ENDWCOUNT
 
 int main(int argc, char** argv) {
   lisp env= cons( cons( (void*)0xc3, mknum(999)),

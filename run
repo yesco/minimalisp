@@ -1,1 +1,3 @@
+wc sisp.c
+../minisquel/wcode sisp.c
 gcc -g sisp.c && ./a.out
