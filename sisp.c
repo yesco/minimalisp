@@ -4,21 +4,12 @@
 
 typedef void* lisp;
 
+lisp nil= NULL;
+
 #define L(a) ((long)a)
 
 lisp mknum(long n) { return (void*)(n*2+1); }
 long num(lisp n) { return L(n)/2; }
-
-lisp tok() {
-  int c= ' ';
-  while(isspace(c)) c= getc(stdin);
-  long r= 0;
-  do { r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
-  } while(({int x=c;c=0;isalnum(x);}) && isalnum((c=fgetc(stdin))));
-  if (c && !isalnum(c)) ungetc(c, stdin);
-  // map nil to 0
-  return r==0x3769D9/2 ? 0 : mknum(r);
-}
 
 typedef struct cons {
   lisp car, cdr;
@@ -32,6 +23,27 @@ lisp cons(lisp a, lisp d) {
   Cons c= malloc(sizeof(*c));
   c->car= a; c->cdr= d;
   return c;
+}
+
+lisp rd();
+
+lisp rdl() {
+  lisp x= rd();
+  return x ? cons(x, rdl()) : x;
+}
+
+lisp rd() {
+  int c= ' ', r= 0;
+  while(isspace(c)) c= getc(stdin);
+  if (c==')') return nil;
+  if (c=='(' || c=='.') return rdl();
+  do {
+    r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
+    c= getc(stdin);
+  } while(isalnum(c));
+  ungetc(c, stdin);
+  // map nil to 0
+  return r==0x3769D9/2 ? 0 : mknum(r);
 }
 
 lisp eq(lisp a, lisp b) { return (void*)(long)(a==b?2:0); }
@@ -83,8 +95,6 @@ lisp eval(lisp e, lisp env) {
   return e;
 }
 
-lisp nil= NULL;
-
 int main(int argc, char** argv) {
   lisp env= cons( cons( (void*)0xc3, mknum(999)),
 	    cons( cons( (void*)0xc5, mknum(666)),
@@ -100,8 +110,9 @@ int main(int argc, char** argv) {
 
   fputc('>', stderr);
   lisp t;
-  while((t=tok())) {
+  while((t=rd())) {
     printf("%ld 0x%lx\n", L(t), L(t));
+    princ(t); putchar('\n');
     princ(eval(t, env));
     putchar('\n');
     fputc('>', stderr);
