@@ -107,7 +107,11 @@ lisp eval(lisp e, lisp env) {
 
 // ENDWCOUNT
 
+#include <assert.h>
+
 int main(int argc, char** argv) {
+  assert(sizeof(long)==8); // require 64-bit
+
   lisp env= cons( cons( (void*)0xc3, mknum(999)),
 	    cons( cons( (void*)0xc5, mknum(666)),
                   nil));
