@@ -29,6 +29,9 @@ lisp cons(lisp a, lisp d) {
   return c;
 }
 
+lisp mknum(long n) { return (void*)(n*2+1); }
+long num(lisp n) { return ((long)n)/2; }
+
 lisp eq(lisp a, lisp b) { return (void*)(long)(a==b?1:0); }
        
 lisp assoc(lisp v, lisp l) {
@@ -38,7 +41,7 @@ lisp assoc(lisp v, lisp l) {
 
 lisp princ(lisp e) {
   if (!e) return printf("nil"),e;
-  if (!consp(e)) return printf("%ld", (long)e),e;
+  if (!consp(e)) return printf("%ld", num(e)),e;
   putchar('('); princ(car(e)); printf(" . "); princ(cdr(e)); putchar(')');
   return e;
 }
@@ -62,8 +65,8 @@ lisp eval(lisp e, lisp env) {
   case 0x64e5: return cdr(car(r));
   case 0x37eee7: return cons(car(r), car(cdr(r)));
   case -0x1d77f4cb: return car(r);
-  case 0xe3: return eq(car(r), car(cdr(r)));
   case 0x1c7ae1d9: // equal
+  case 0xe3: return eq(car(r), car(cdr(r)));
   case 0x61e1: // map
   case -0xcd: // if
   case 0x69d9: // nil
@@ -77,7 +80,7 @@ lisp nil= NULL;
 
 int main(int argc, char** argv) {
   lisp x= nil;
-  x= (void*)42;
+  x= mknum(42);
   princ(x);
   putchar('\n');
   princ(eval(x, nil));
