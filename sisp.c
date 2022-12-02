@@ -2,19 +2,24 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-long tok() {
+typedef void* lisp;
+
+lisp mknum(long n) { return (void*)(n*2+1); }
+long num(lisp n) { return ((long)n)/2; }
+
+lisp tok() {
   int c= ' ';
   while(isspace(c)) c= getc(stdin);
+  ungetc(c, stdin);
   long r= 0;
   while((c=fgetc(stdin))!=EOF) {
     if (isspace(c)||c=='('||c==')') break;
     r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
   }
   ungetc(c, stdin);
-  return r==0x69d9/2 ? 0 : r*2+1;
+  printf("<%ld>", r);
+  return r==0x3769D9/2 ? 0 : mknum(r);
 }
-
-typedef void* lisp;
 
 typedef struct cons {
   lisp car, cdr;
@@ -29,13 +34,10 @@ lisp cons(lisp a, lisp d) {
   return c;
 }
 
-lisp mknum(long n) { return (void*)(n*2+1); }
-long num(lisp n) { return ((long)n)/2; }
-
 lisp eq(lisp a, lisp b) { return (void*)(long)(a==b?1:0); }
        
 lisp assoc(lisp v, lisp l) {
-  while(consp(l) && eq(v, car(car(l)))) l= cdr(l);
+  while(consp(l) && !eq(v, car(car(l)))) l= cdr(l);
   return car(l);
 }
 
@@ -61,16 +63,14 @@ lisp eval(lisp e, lisp env) {
   if (!consp(e)) return var(e, env, e);
   lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
   switch((long)car(e)) {
-  case 0x61e5: return car(car(r));
-  case 0x64e5: return cdr(car(r));
-  case 0x37eee7: return cons(car(r), car(cdr(r)));
-  case -0x1d77f4cb: return car(r);
-  case 0x1c7ae1d9: // equal
-  case 0xe3: return eq(car(r), car(cdr(r)));
-  case 0x61e1: // map
-  case -0xcd: // if
-  case 0x69d9: // nil
-  case 't': // t
+  case 0x31e1e5: return car(car(r));
+  case 0x31e4e5: return cdr(car(r));
+  case 0x18f7eee7: return cons(car(r), car(cdr(r)));
+  case -0xe3d77f4cb: return car(r);
+  case 0xcbc7ae1d9: // equal
+  case 0x65e3: return eq(car(r), car(cdr(r)));
+  case 0x36e1e1: // map
+  case -0x69cd: // if
   default: printf("ERROR: "); princ(e); break;
   }
   return e;
@@ -79,15 +79,24 @@ lisp eval(lisp e, lisp env) {
 lisp nil= NULL;
 
 int main(int argc, char** argv) {
+  lisp env= cons( cons( (void*)0xc3, mknum(999)),
+	    cons( cons( (void*)0xc5, mknum(666)),
+                  nil));
+
   lisp x= nil;
   x= mknum(42);
+  
   princ(x);
   putchar('\n');
-  princ(eval(x, nil));
+  princ(eval(x, env));
   putchar('\n');
 
-  long t;
+  fputc('>', stderr);
+  lisp t;
   while((t=tok())) {
     printf("%ld 0x%lx\n", t, t);
+    princ(eval(t, env));
+    putchar('\n');
+    fputc('>', stderr);
   }
 }
