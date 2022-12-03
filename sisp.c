@@ -3,6 +3,7 @@
 // (>) 2022 jsk@yesco.org
 // 
 // + - * / car cdr cons eq equal assoc eval consp princ print terpri quote read
+// quit not
 // TODO: define/setq/lambda/if/cond/map
 
 #include <stdio.h>
@@ -14,16 +15,16 @@ typedef void* lisp;
 lisp nil= NULL;
 
 
-#define L(a) ((long)a)
-#define D(SIG, RET) lisp SIG { return RET; }
+#define L(a) ((long)((long)(a)))
+#define D(SIG, RET) lisp SIG { return (lisp)L(RET); }
 
 
-D(mknum(long n), (void*)(n*2+1))
+D(mknum(long n), n*2+1)
 long num(lisp n) { return (L(n)-1)/2; }
 
 
 typedef struct cons { lisp car, cdr; } *Cons;
-D(consp(lisp c), (void*)L(L(c && !(L(c)&7))))
+D(consp(lisp c), c && !(L(c)&7))
 D(car(Cons c), consp(c) ? c->car : 0)
 D(cdr(Cons c), consp(c) ? c->cdr : 0)
 D(cons(lisp a, lisp d), ({Cons c= malloc(sizeof(*c));c->car=a;c->cdr=d; c;}))
@@ -37,14 +38,14 @@ lisp rd() {
   if (c==')') return nil;
   if (c=='(' || c=='.') return rdl();
   do {r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
-  } while(isalnum((c==getc(stdin))));
+  } while(isalnum((c=getc(stdin))));
   ungetc(c, stdin);
   // map nil to 0
   return r==0x3769D9/2 ? 0 : mknum(r);
 }
 
-D(eq(lisp a, lisp b), (void*)(long)(a==b?2:0))
-D(equ(lisp a,lisp b),(void*)L(L(eq(a,b)||equ(car(a),car(b))&&equ(cdr(a),cdr(b)))))
+D(eq(lisp a, lisp b), a==b?3:0)
+D(equ(lisp a,lisp b), eq(a,b)||equ(car(a),car(b))&&equ(cdr(a),cdr(b)))
 
 D(assoc(lisp v, lisp l), ({while(consp(l) && !eq(v,car(car(l)))) l= cdr(l); car(l);}))
 
@@ -75,6 +76,8 @@ lisp eval(lisp e, lisp env) {
 #define S(CD,F) case CD: return F(car(r))
   S(0x31e1e5, car);S(0x31e4e5, cdr);S(0x7bf773e1, consp);S(0x1cb4eec7, princ);
 
+  case 0x376fe9: return (lisp)(car(r)?0L:3L); // not
+
   case 0xe3d77f4cb: return car(r); // quote
 
   case 0x1cb4eee9: princ(car(r)); // print
@@ -90,6 +93,8 @@ lisp eval(lisp e, lisp env) {
 
   case -0x69cd: // if
 
+  // TODO: let int lt or and cond if leta lambda define reduce gc
+ 
   default: printf("ERROR: "); princ(e); break;
   }
   return e;
@@ -104,13 +109,13 @@ lisp eval(lisp e, lisp env) {
 int main(int argc, char** argv) {
   assert(sizeof(long)==8); // require 64-bit
 
-  lisp env= cons( cons( (void*)0xc3, mknum(999)),
-	    cons( cons( (void*)0xc5, mknum(666)),
+  lisp env= cons( cons( (lisp)0xc3, mknum(999)),
+	    cons( cons( (lisp)0xc5, mknum(666)),
                   nil));
 
   lisp x= nil;
   x= mknum(42);
-  x= cons( (void*)0x55, cons( mknum(111), cons(mknum(3), nil)));
+  x= cons( (lisp)0x55, cons( mknum(111), cons(mknum(3), nil)));
   princ(x);
   putchar('\n');
   princ(eval(x, env));
@@ -118,10 +123,11 @@ int main(int argc, char** argv) {
 
   fputc('>', stderr);
   lisp t;
-  while((t=rd())) {
-    printf("( %ld 0x%lx )\n", L(t), L(t));
+  while(L((t=rd()))!=0x1c7ae9e9) { // quit
+    printf("  [ %ld 0x%lx ]\n", L(t), L(t));
     princ(t); putchar('\n');
     princ(eval(t, env));
+    putchar('\n');
     putchar('\n');
     fputc('>', stderr);
   }
