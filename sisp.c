@@ -2,54 +2,44 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-typedef void* lisp;
 
+typedef void* lisp;
 lisp nil= NULL;
 
-#define L(a) ((long)a)
 
-lisp mknum(long n) { return (void*)(n*2+1); }
+#define L(a) ((long)a)
+#define D(SIG, RET) lisp SIG { return RET; }
+
+
+D(mknum(long n), (void*)(n*2+1))
 long num(lisp n) { return (L(n)-1)/2; }
 
-typedef struct cons { lisp car, cdr; } *Cons;
 
-lisp consp(lisp c) { return (void*)L(L(c && !(L(c)&7))); }
-lisp car(Cons c) { return consp(c) ? c->car : 0; }
-lisp cdr(Cons c) { return consp(c) ? c->cdr : 0; }
-lisp cons(lisp a, lisp d) {
-  Cons c= malloc(sizeof(*c));
-  c->car= a; c->cdr= d;
-  return c;
-}
+typedef struct cons { lisp car, cdr; } *Cons;
+D(consp(lisp c), (void*)L(L(c && !(L(c)&7))))
+D(car(Cons c), consp(c) ? c->car : 0)
+D(cdr(Cons c), consp(c) ? c->cdr : 0)
+D(cons(lisp a, lisp d), ({Cons c= malloc(sizeof(*c));c->car=a;c->cdr=d; c;}))
+
 
 lisp rd();
-
-lisp rdl() {
-  lisp x= rd();
-  return x ? cons(x, rdl()) : x;
-}
-
+D(rdl(), ({lisp x=rd(); x? cons(x, rdl()) : x;}))
 lisp rd() {
   int c= ' ', r= 0;
   while(isspace(c)) c= getc(stdin);
   if (c==')') return nil;
   if (c=='(' || c=='.') return rdl();
-  do {
-    r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
-    c= getc(stdin);
-  } while(isalnum(c));
+  do {r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
+  } while(isalnum((c==getc(stdin))));
   ungetc(c, stdin);
   // map nil to 0
   return r==0x3769D9/2 ? 0 : mknum(r);
 }
 
-lisp eq(lisp a, lisp b) { return (void*)(long)(a==b?2:0); }
-lisp equal(lisp a, lisp b) { return (void*)L(L(eq(a, b) || equal(car(a), car(b)) && equal(cdr(a), cdr(b)))); }
+D(eq(lisp a, lisp b), (void*)(long)(a==b?2:0))
+D(equ(lisp a,lisp b),(void*)L(L(eq(a,b)||equ(car(a),car(b))&&equ(cdr(a),cdr(b)))))
 
-lisp assoc(lisp v, lisp l) {
-  while(consp(l) && !eq(v, car(car(l)))) l= cdr(l);
-  return car(l);
-}
+D(assoc(lisp v, lisp l), ({while(consp(l) && !eq(v,car(car(l)))) l= cdr(l); car(l);}))
 
 lisp princ(lisp e) { lisp x= e;
   if (!e) return printf("nil"),e;
@@ -61,16 +51,11 @@ lisp princ(lisp e) { lisp x= e;
   return putchar(')'),e;
 }
 
-lisp var(lisp v, lisp env, lisp def) {
-  lisp e= assoc(v, env);
-  return e ? cdr(e) : def;
-}
+
+D(var(lisp v, lisp env, lisp def), ({lisp e=assoc(v,env);e ? cdr(e) : def;}))
 
 lisp eval(lisp e, lisp env);
-
-lisp evlist(lisp l, lisp env) {
-  return !consp(l) ? l : cons(eval(car(l), env), evlist(cdr(l), env));
-}
+D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval(car(l),env),evlist(cdr(l),env)))
 
 lisp eval(lisp e, lisp env) {
   if (!consp(e)) return var(e, env, e);
@@ -84,7 +69,7 @@ lisp eval(lisp e, lisp env) {
   case 0x31e4e5: return cdr(car(r));
 
 #define B(CD,F) case CD: return F(car(r), car(cdr(r)))
-  B(0x18f7eee7, cons); B(0x65e3, eq); B(0xcbc7ae1d9, equal);
+  B(0x18f7eee7, cons); B(0x65e3, eq); B(0xcbc7ae1d9, equ);
   B(0x3cf9efc7, assoc); B(0x197b61d9, eval); //B(0x3c386cf3, apply);
 
   case 0x7bf773e1: return consp(car(r));
@@ -102,6 +87,8 @@ lisp eval(lisp e, lisp env) {
   }
   return e;
 }
+
+
 
 // ENDWCOUNT
 
