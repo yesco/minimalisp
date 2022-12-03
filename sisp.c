@@ -1,3 +1,10 @@
+// lisp - A minimal "compact" lisp
+// ===============================
+// (>) 2022 jsk@yesco.org
+// 
+// + - * / car cdr cons eq equal assoc eval consp princ print terpri quote read
+// TODO: define/setq/lambda/if/cond/map
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -66,9 +73,9 @@ lisp eval(lisp e, lisp env) {
   M(0x57, +); M(0x5b, -); M(0x55, *); M(0x5f, /);
 
 #define S(CD,F) case CD: return F(car(r))
-  S(0x31e1e5, car); S(0x31e4e5, cdr);
-  S(0x7bf773e1, consp); S(0x1cb4eec7, princ);
-  case -0xe3d77f4cb: return car(r); // quote
+  S(0x31e1e5, car);S(0x31e4e5, cdr);S(0x7bf773e1, consp);S(0x1cb4eec7, princ);
+
+  case 0xe3d77f4cb: return car(r); // quote
 
   case 0x1cb4eee9: princ(car(r)); // print
   case 0xbcb872d3: return putchar('\n'),nil;
@@ -77,8 +84,7 @@ lisp eval(lisp e, lisp env) {
 
 #define B(CD,F) case CD: return F(car(r), car(cdr(r)))
   B(0x18f7eee7, cons); B(0x65e3, eq); B(0xcbc7ae1d9, equ);
-  B(0x3cf9efc7, assoc); B(0x197b61d9, eval); //B(0x3c386cf3, apply);
-
+  B(0x3cf9efc7, assoc); B(0x197b61d9, eval);   //B(0x3c386cf3, apply);
 
   case 0x36e1e1: // map
 
