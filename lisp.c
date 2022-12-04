@@ -16,15 +16,17 @@
 
 
 typedef void* lisp;
-lisp nil= NULL;
-lisp t= (lisp)3L; // numeric: 1
+// cons 00
+//  num 01
+// ???? 10 free to use, string?
+// atom 11
+lisp nil= NULL, t= (lisp)5L; // numeric: 1
 
 #define L(a) ((long)((long)(a)))
 #define D(SIG, RET) lisp SIG { return (lisp)L(RET); }
 
-
-D(mknum(long n), n*2+1)
-long num(lisp n) { return (L(n)-1)/2; }
+D(mknum(long n), n*4+1)
+long num(lisp n) { return (L(n)-1)/4; }
 
 
 typedef struct cons { lisp car, cdr; } *Cons;
@@ -39,15 +41,17 @@ D(cons(lisp a, lisp d), ({Cons c= malloc(sizeof(*c));c->car=a;c->cdr=d; c;}))
 lisp rd();
 D(rdl(), ({lisp x=rd(); x? cons(x, rdl()) : x;}))
 lisp rd() {
-  int c= ' ', r= 0;
+  int c= ' ', r= 0, a= 0;
   while(isspace(c)) c= getc(stdin);
   if (c==')') return nil;
   if (c=='(' || c=='.') return rdl();
-  do {r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c);
+  do {r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c); a= a||!isdigit(c);
+    // TODO: isnotstop?
   } while(isalnum((c=getc(stdin))));
   ungetc(c, stdin);
-  // map nil to 0
-  return r==0x3769D9/2 ? 0 : mknum(r);
+  // map "nil" to (lisp)0
+  printf("aaaaaaaaaaaaa=%d\n", a);
+  return r==0x3769D9/2 ? 0 : mknum(r)+2*a;
 }
 
 D(eq(lisp a, lisp b), a==b?t:0)
@@ -55,9 +59,10 @@ D(equ(lisp a,lisp b), eq(a,b)||equ(car(a),car(b))&&equ(cdr(a),cdr(b)))
 
 D(assoc(lisp v, lisp l), ({while(consp(l) && !eq(v,car(car(l)))) l= cdr(l); car(l);}))
 
+int pratom(long a){char s[9]={},i=8;do s[--i]=a&127;while(a>>=7);return printf("%s",s+i);}
 lisp princ(lisp e) { lisp x= e;
   if (!e) return printf("nil"),e;
-  if (!consp(e)) return printf("%ld", num(e)),e;
+  if (!consp(e)) return ((L(e)&3)==3?pratom(L(e)/4):printf("%ld", num(e))), e;
   putchar('('); do {
     princ(car(x)); x= cdr(x); x && putchar(' ');
   } while (consp(x));
@@ -74,19 +79,20 @@ D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval(car(l),env),evlist(cdr(l),env)))
 lisp eval(lisp e, lisp env) {
   if (!consp(e)) return var(e, env, e);
   lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
-  switch((long)car(e)) {
+  switch(L(car(e))/2) {
 
   #define M(CD,OP) case CD: return mknum(num(car(r)) OP num(car(cdr(r))))
   M(0x57, +);M(0x5b, -);M(0x55, *);M(0x5f, /);M(0x4b, %);M(0x4d, &);M(0xf9, |);M(0x30eec9, &&);M(0x6fe5, ||);
+
   #define C(CD,OP) case CD: return (num(car(r)) OP num(car(cdr(r))))?t:0
   C(0x79, <);C(0x7b, ==);C(0x7d, >);
 
   #define S(CD,F) case CD: return F(car(r))
   S(0x31e1e5, car);S(0x31e4e5, cdr);S(0x7bf773e1, consp);S(0x1cb4eec7, princ);
 
-  case 0x376fe9: return (lisp)(car(r)?0L:t); // not 
+  case 0x376fe9: return (lisp)(car(r)?0L:t); // not
 
-  case 0x3b7164c3: return r; // lambda
+  case 0x3b7164c3: return e; // lambda
   case 0xe3d77f4cb: return car(r); // quote
 
   case 0x1cb4eee9: princ(car(r)); // print
@@ -122,13 +128,14 @@ lisp eval(lisp e, lisp env) {
 int main(int argc, char** argv) {
   assert(sizeof(long)==8); // require 64-bit
 
-  lisp env= cons( cons( (lisp)0xc3, mknum(999)),
-	    cons( cons( (lisp)0xc5, mknum(666)),
+  // ( (x , 999) (y . 666) )
+  lisp env= cons( cons( (lisp)0x1e3, mknum(999)),
+	    cons( cons( (lisp)0x1e7, mknum(666)),
                   nil));
 
   lisp x= nil;
   x= mknum(42);
-  x= cons( (lisp)0x55, cons( mknum(111), cons(mknum(3), nil)));
+  x= cons( (lisp)0xab, cons( mknum(111), cons(mknum(3), nil)));
   princ(x);
   putchar('\n');
   princ(eval(x, env));
