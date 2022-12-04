@@ -6,9 +6,9 @@
 // car cdr cons assoc
 // eq equal consp symbolp and or not
 // princ print terpri quote lambda read
-// eval quit
+// if eval quit
 //
-// 29 ops!
+// 30 ops!
 // TODO: define let setq cond map apply leta reduce
 // No Garbage Collection (yet...)
 
@@ -54,9 +54,7 @@ int pratom(unsigned long a){char s[9]={},i=8;do s[--i]=a&127;while(a>>=7);return
 lisp princ(lisp e) { lisp x= e;
   if (!e) return printf("nil"),e;
   if (!consp(e)) return symp(e)?pratom(L(e)/4):printf("%ld", num(e)), e;
-  putchar('('); do {
-    princ(car(x)); x= cdr(x); x && putchar(' ');
-  } while (consp(x));
+  putchar('(');do{princ(car(x)); x=cdr(x); x && putchar(' ');} while(consp(x));
   if (x) printf(". "),princ(x);
   return putchar(')'),e;
 }
@@ -96,7 +94,7 @@ lisp eval(lisp e, lisp env) {
 
   // TODO: tail recursion
   case 0x69cd: return eval(eval(car(r), env)? car(cdr(r)): car(cdr(cdr(r))), env);
-
+    
   default: printf("ERROR: "); princ(e); break;
   }
   return e;
