@@ -1,3 +1,5 @@
-wc sisp.c
-../minisquel/wcode sisp.c
-gcc -g sisp.c && ./a.out
+wc lisp.c
+../minisquel/wcode lisp.c
+echo
+echo 
+gcc -g lisp.c && ./a.out
