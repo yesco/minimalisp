@@ -7,6 +7,7 @@
 // and or not
 // quit
 //
+// 25 ops!
 // TODO: define setq cond map apply
 
 #include <stdio.h>
