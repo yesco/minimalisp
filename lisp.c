@@ -2,9 +2,12 @@
 // ===============================
 // (>) 2022 jsk@yesco.org
 // 
-// + - * / car cdr cons eq equal assoc eval consp princ print terpri quote read
-// quit not
-// TODO: define/setq/lambda/if/cond/map
+// + - * / < = > % & |
+// car cdr cons eq equal assoc eval consp princ print terpri quote lambda read
+// and or not
+// quit
+//
+// TODO: define setq cond map apply
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +16,7 @@
 
 typedef void* lisp;
 lisp nil= NULL;
-
+lisp t= (lisp)3L; // numeric: 1
 
 #define L(a) ((long)((long)(a)))
 #define D(SIG, RET) lisp SIG { return (lisp)L(RET); }
@@ -30,6 +33,8 @@ D(cdr(Cons c), consp(c) ? c->cdr : 0)
 D(cons(lisp a, lisp d), ({Cons c= malloc(sizeof(*c));c->car=a;c->cdr=d; c;}))
 
 
+// TODO: need to make numbers/symbols distinct... (< x 3) ....
+
 lisp rd();
 D(rdl(), ({lisp x=rd(); x? cons(x, rdl()) : x;}))
 lisp rd() {
@@ -44,7 +49,7 @@ lisp rd() {
   return r==0x3769D9/2 ? 0 : mknum(r);
 }
 
-D(eq(lisp a, lisp b), a==b?3:0)
+D(eq(lisp a, lisp b), a==b?t:0)
 D(equ(lisp a,lisp b), eq(a,b)||equ(car(a),car(b))&&equ(cdr(a),cdr(b)))
 
 D(assoc(lisp v, lisp l), ({while(consp(l) && !eq(v,car(car(l)))) l= cdr(l); car(l);}))
@@ -70,14 +75,17 @@ lisp eval(lisp e, lisp env) {
   lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
   switch((long)car(e)) {
 
-#define M(CD,OP) case CD: return mknum(num(car(r)) OP num(car(cdr(r))))
-  M(0x57, +); M(0x5b, -); M(0x55, *); M(0x5f, /);
+  #define M(CD,OP) case CD: return mknum(num(car(r)) OP num(car(cdr(r))))
+  M(0x57, +);M(0x5b, -);M(0x55, *);M(0x5f, /);M(0x4b, %);M(0x4d, &);M(0xf9, |);M(0x30eec9, &&);M(0x6fe5, ||);
+  #define C(CD,OP) case CD: return (num(car(r)) OP num(car(cdr(r))))?t:0
+  C(0x79, <);C(0x7b, ==);C(0x7d, >);
 
-#define S(CD,F) case CD: return F(car(r))
+  #define S(CD,F) case CD: return F(car(r))
   S(0x31e1e5, car);S(0x31e4e5, cdr);S(0x7bf773e1, consp);S(0x1cb4eec7, princ);
 
-  case 0x376fe9: return (lisp)(car(r)?0L:3L); // not
+  case 0x376fe9: return (lisp)(car(r)?0L:t); // not 
 
+  case 0x3b7164c3: return r; // lambda
   case 0xe3d77f4cb: return car(r); // quote
 
   case 0x1cb4eee9: princ(car(r)); // print
@@ -91,7 +99,11 @@ lisp eval(lisp e, lisp env) {
 
   case 0x36e1e1: // map
 
-  case -0x69cd: // if
+    // TODO: tail recursion
+  case 0x69cd: if (eval(car(r), env))
+    return eval(car(cdr(r)), env);
+  else
+    return eval(car(cdr(cdr(r))), env);
 
   // TODO: let int lt or and cond if leta lambda define reduce gc
  
