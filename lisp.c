@@ -36,6 +36,7 @@ D(eq(lisp a, lisp b), a==b?t:0)
 D(equ(lisp a,lisp b), eq(a,b)||equ(car(a),car(b))&&equ(cdr(a),cdr(b)))
 D(assoc(lisp v,lisp l),({while(consp(l)&&!eq(v,car(car(l)))) l=cdr(l);car(l);}))
 
+// TODO: not quit at nil, but at ')'
 lisp rd();                D(rdlist(), ({lisp x=rd(); x? cons(x, rdlist()) : x;}))
 lisp rd() { long c= ' ', r= 0, a= 0; while(isspace(c)) c= getc(stdin);
   if (c==')') return nil; else if (c=='(' || c=='.') return rdlist();
@@ -62,15 +63,14 @@ lisp eval(lisp e, lisp env) { if (!consp(e)) return symp(e)? var(e, env, e): e;
   lisp r=cdr(e); e=car(e);
   switch(L(e)/2) { // hmmm change consts?
 
-  #define M(CD,OP) case CD: return mknum(num(E(r)) OP num(E(cdr(r))))
-  M(0x57, +);M(0x5b, -);M(0x55, *);M(0x5f, /);M(0x4b, %);M(0x4d, &);M(0xf9, |);M(0x30eec9, &&);M(0x6fe5, ||);
+  #define M(CD,OP) case 0x##CD: return mknum(num(E(r)) OP num(E(cdr(r))));
+  M(57,+)M(5b,-)M(55,*)M(5f,/)M(4b,%)M(4d,&)M(f9,|)M(30eec9,&&)M(6fe5,||);
 
   #define C(CD,OP) case CD: return (num(E(r)) OP num(E(cdr(r))))?t:0
   C(0x79, <);C(0x7b, ==);C(0x7d, >);
 
   #define S(CD,F) case 0x##CD: return F(E(r));
-  S(31e1e5,car)S(31e4e5,cdr)S(7bf773e1,consp)S(1cb4eec7,princ)S(39f9db8b7ece1,symp)
-  // D(nump(lisp n), tag(s)==2)
+S(31e1e5,car)S(31e4e5,cdr)S(7bf773e1,consp)S(1cb4eec7,princ)S(39f9db8b7ece1,symp)
 
   case 0x1bbaecd9: case 0x376fe9: return (lisp)(E(r)?0L:t); // not==null
   case 0x1cb4eee9: princ(E(r));   case 0xbcb872d3: return putchar('\n'),nil;
@@ -85,11 +85,9 @@ lisp eval(lisp e, lisp env) { if (!consp(e)) return symp(e)? var(e, env, e): e;
 
   // TODO: tail recursion
   case 0x69cd: return E(E(r)? cdr(r): cdr(cdr(r))); // if
-    
   default: if (!consp(e)) return princ(e); else e=cdr(e); // apply
     return eval(car(cdr(e)), bnd(car(e), r, env));
   }
-  
   return e;
 }
 
