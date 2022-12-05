@@ -62,15 +62,14 @@ lisp princ(lisp e) { lisp x= e;
 D(var(lisp v, lisp env, lisp def), ({lisp e=assoc(v,env); e? cdr(e): def;}))
 
 lisp eval(lisp e, lisp env);
-D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval
-(car(l),env),evlist(cdr(l),env)))
+D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval(car(l),env),evlist(cdr(l),env)))
 D(bnd(lisp f,lisp a),({f&&a?cons(cons(car(f),car(a)),bnd(cdr(f),cdr(a))):nil;}))
 lisp eval(lisp e, lisp env) {
   if (!consp(e)) return symp(e)? var(e, env, e): e;
   if (L(car(e))/2==0x6cc3b7164c3) return e; // lambda
   lisp r=cdr(e); e=car(e);
 #define E(x) eval(car(x), env)
-  switch(L(e)/2) {
+  switch(L(e)/2) { // hmmm change consts?
 
   #define M(CD,OP) case CD: return mknum(num(E(r)) OP num(E(cdr(r))))
   M(0x57, +);M(0x5b, -);M(0x55, *);M(0x5f, /);M(0x4b, %);M(0x4d, &);M(0xf9, |);M(0x30eec9, &&);M(0x6fe5, ||);
@@ -96,8 +95,8 @@ lisp eval(lisp e, lisp env) {
   // TODO: tail recursion
   case 0x69cd: return E(E(r)? cdr(r): cdr(cdr(r))); // if
     
-  default: if (!consp(e)) return princ(e); // apply
-    return e=cdr(e),eval(car(cdr(e)), bnd(car(e), evlist(r, env)));
+  default: if (!consp(e)) return princ(e); else e=cdr(e); // apply
+    return eval(car(cdr(e)), bnd(car(e), evlist(r, env)));
   }
   
   return e;
