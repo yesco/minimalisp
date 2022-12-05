@@ -16,13 +16,12 @@
 #include <stdlib.h>
 #include <ctype.h>
 
-typedef void* lisp;
+typedef void* lisp; lisp nil= NULL, t= (lisp)5L; // numeric: 1
 #define tag(c)(L(c)&3)
-// cons 00
+// cons 00 TODO: lazy stack cons?
 //  num 01
-// ???? 10 free to use, string?
+// ???? 10 thunk?
 // atom 11
-lisp nil= NULL, t= (lisp)5L; // numeric: 1
 typedef struct cons { lisp car, cdr; } *Cons;
 #define L(a) ((long)((long)(a)))
 #define D(SIG, RET) lisp SIG { return (lisp)L(RET); }
@@ -34,41 +33,33 @@ D(cons(lisp a, lisp d), ({Cons c= malloc(sizeof(*c));c->car=a;c->cdr=d; c;}))
 
 D(eq(lisp a, lisp b), a==b?t:0)
 D(equ(lisp a,lisp b), eq(a,b)||equ(car(a),car(b))&&equ(cdr(a),cdr(b)))
-D(assoc(lisp v, lisp l), ({while(consp(l) && !eq(v,car(car(l)))) l= cdr(l); car(l);}))
+D(assoc(lisp v,lisp l),({while(consp(l)&&!eq(v,car(car(l)))) l=cdr(l);car(l);}))
 
-lisp rd(); D(rdl(), ({lisp x=rd(); x? cons(x, rdl()) : x;}))
-lisp rd() {
-  long c= ' ', r= 0, a= 0;
-  while(isspace(c)) c= getc(stdin);
-  if (c==')') return nil;
-  if (c=='(' || c=='.') return rdl();
+lisp rd();   D(rdlist(), ({lisp x=rd(); x? cons(x, rdlist()) : x;}))
+lisp rd() { long c= ' ', r= 0, a= 0; while(isspace(c)) c= getc(stdin);
+  if (c==')') return nil; else if (c=='(' || c=='.') return rdlist();
   do {r= r*(isdigit(c)?10:128) + (isdigit(c)?c-'0':c); a= a||!isdigit(c);
     // TODO: isnotstop?
-  } while(isalnum((c=getc(stdin))));
-  ungetc(c, stdin);
-  // map "nil" to (lisp)0
-  return r==0x3769D9/2 ? 0 : mknum(r)+2*a;
+  } while(isalnum((c=getc(stdin)))); ungetc(c, stdin);
+  return r==0x3769D9/2 ? 0 : mknum(r)+2*a; // map nil->0
 }
 
-int pratom(unsigned long a){char s[9]={},i=8;do s[--i]=a&127;while(a>>=7);return printf("%s",s+i);}
-lisp princ(lisp e) { lisp x= e;
-  if (!e) return printf("nil"),e;
-  if (!consp(e)) return symp(e)?pratom(L(e)/4):printf("%ld", num(e)), e;
+int psym(unsigned long a){char s[9]={},i=8;do s[--i]=a&127;while(a>>=7);return printf("%s",s+i);}
+lisp princ(lisp e) { lisp x= e; if (!e) return printf("nil"),e;
+  if (!consp(e)) return symp(e)?psym(L(e)/4):printf("%ld", num(e)), e;
   putchar('(');do{princ(car(x)); x=cdr(x); x && putchar(' ');} while(consp(x));
-  if (x) printf(". "),princ(x);
-  return putchar(')'),e;
+  if (x) { printf(". "); princ(x); } putchar(')'); return e;
 }
 
 D(var(lisp v, lisp env, lisp def), ({lisp e=assoc(v,env); e? cdr(e): def;}))
 
-lisp eval(lisp e, lisp env);
-D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval(car(l),env),evlist(cdr(l),env)))
-D(bnd(lisp f,lisp a),({f&&a?cons(cons(car(f),car(a)),bnd(cdr(f),cdr(a))):nil;}))
+#define E(x) eval(car(x), env)
+lisp eval(lisp e, lisp env); D(bnd(lisp f,lisp a,lisp env),
+  ({f&&a?cons(cons(car(f),E(a)),bnd(cdr(f),cdr(a),env)):nil;}))
 lisp eval(lisp e, lisp env) {
   if (!consp(e)) return symp(e)? var(e, env, e): e;
-  if (L(car(e))/2==0x6cc3b7164c3) return e; // lambda
+  if (L(car(e))/2==0x6cc3b7164c3) return e; // lambda TODO: make thunk?
   lisp r=cdr(e); e=car(e);
-#define E(x) eval(car(x), env)
   switch(L(e)/2) { // hmmm change consts?
 
   #define M(CD,OP) case CD: return mknum(num(E(r)) OP num(E(cdr(r))))
@@ -96,7 +87,7 @@ lisp eval(lisp e, lisp env) {
   case 0x69cd: return E(E(r)? cdr(r): cdr(cdr(r))); // if
     
   default: if (!consp(e)) return princ(e); else e=cdr(e); // apply
-    return eval(car(cdr(e)), bnd(car(e), evlist(r, env)));
+    return eval(car(cdr(e)), bnd(car(e), r, env));
   }
   
   return e;
