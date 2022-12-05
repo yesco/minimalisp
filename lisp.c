@@ -67,38 +67,37 @@ D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval
 D(bnd(lisp f,lisp a),({f&&a?cons(cons(car(f),car(a)),bnd(cdr(f),cdr(a))):nil;}))
 lisp eval(lisp e, lisp env) {
   if (!consp(e)) return symp(e)? var(e, env, e): e;
-  lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
-  switch(L(car(e))/2) {
+  if (L(car(e))/2==0x6cc3b7164c3) return e; // lambda
+  lisp r=cdr(e); e=car(e);
+#define E(x) eval(car(x), env)
+  switch(L(e)/2) {
 
-  #define M(CD,OP) case CD: return mknum(num(car(r)) OP num(car(cdr(r))))
+  #define M(CD,OP) case CD: return mknum(num(E(r)) OP num(E(cdr(r))))
   M(0x57, +);M(0x5b, -);M(0x55, *);M(0x5f, /);M(0x4b, %);M(0x4d, &);M(0xf9, |);M(0x30eec9, &&);M(0x6fe5, ||);
 
-  #define C(CD,OP) case CD: return (num(car(r)) OP num(car(cdr(r))))?t:0
+  #define C(CD,OP) case CD: return (num(E(r)) OP num(E(cdr(r))))?t:0
   C(0x79, <);C(0x7b, ==);C(0x7d, >);
 
-  #define S(CD,F) case CD: return F(car(r))
+  #define S(CD,F) case CD: return F(E(r))
   S(0x31e1e5, car);S(0x31e4e5, cdr);S(0x7bf773e1, consp);S(0x1cb4eec7, princ);S(0x39f9db8b7ece1, symp);
 // D(nump(lisp n), tag(s)==2)
-  case 0x1bbaecd9: case 0x376fe9: return (lisp)(car(r)?0L:t); // not == null
-  case 0x1cb4eee9: princ(car(r)); // print
+  case 0x1bbaecd9: case 0x376fe9: return (lisp)(E(r)?0L:t); // not == null
+  case 0x1cb4eee9: princ(E(r)); // print
   case 0xbcb872d3: return putchar('\n'),nil; // terpri
   case 0x1cb2e1c9: return rd(); // read
 
-#define B(CD,F) case CD: return F(car(r), car(cdr(r)))
+#define B(CD,F) case CD: return F(E(r), E(cdr(r)))
   B(0x18f7eee7, cons); B(0x65e3, eq); B(0xcbc7ae1d9, equ);
   B(0x3cf9efc7, assoc); B(0x197b61d9, eval);   //B(0x3c386cf3, apply);
 
   case 0x36e1e1: return nil; // map
-
-  // TODO: no-eval
-  case 0x6cc3b7164c3: return e; // lambda
   case 0xe3d77f4cb: return car(r); // quote
 
   // TODO: tail recursion
-  case 0x69cd: return eval(eval(car(r), env)? car(cdr(r)): car(cdr(cdr(r))), env);
+  case 0x69cd: return E(E(r)? cdr(r): cdr(cdr(r))); // if
     
-  default: if (!consp(car(e))) return princ(e);;
-    return e=cdr(car(e)),eval(car(cdr(e)), bnd(car(e), r));
+  default: if (!consp(e)) return princ(e); // apply
+    return e=cdr(e),eval(car(cdr(e)), bnd(car(e), evlist(r, env)));
   }
   
   return e;
@@ -132,7 +131,7 @@ int main(int argc, char** argv) {
   lisp t;
   while(L((t=rd()))!=0x1c7ae9e9) { // quit
     printf("  [ %ld 0x%16lx ]\n", L(t), L(t)/2);
-    princ(t); putchar('\n');
+    princ(t); putchar('\n'); putchar('=');
     princ(eval(t, env));
     putchar('\n');
     putchar('\n');
