@@ -62,7 +62,9 @@ lisp princ(lisp e) { lisp x= e;
 D(var(lisp v, lisp env, lisp def), ({lisp e=assoc(v,env); e? cdr(e): def;}))
 
 lisp eval(lisp e, lisp env);
-D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval(car(l),env),evlist(cdr(l),env)))
+D(evlist(lisp l,lisp env),!consp(l)?l:cons(eval
+(car(l),env),evlist(cdr(l),env)))
+D(bnd(lisp f,lisp a),({f&&a?cons(cons(car(f),car(a)),bnd(cdr(f),cdr(a))):nil;}))
 lisp eval(lisp e, lisp env) {
   if (!consp(e)) return symp(e)? var(e, env, e): e;
   lisp r= car(e)>0 ? evlist(cdr(e), env) : cdr(e); 
@@ -86,7 +88,7 @@ lisp eval(lisp e, lisp env) {
   B(0x18f7eee7, cons); B(0x65e3, eq); B(0xcbc7ae1d9, equ);
   B(0x3cf9efc7, assoc); B(0x197b61d9, eval);   //B(0x3c386cf3, apply);
 
-  case 0x36e1e1: // map
+  case 0x36e1e1: return nil; // map
 
   // TODO: no-eval
   case 0x6cc3b7164c3: return e; // lambda
@@ -95,8 +97,10 @@ lisp eval(lisp e, lisp env) {
   // TODO: tail recursion
   case 0x69cd: return eval(eval(car(r), env)? car(cdr(r)): car(cdr(cdr(r))), env);
     
-  default: printf("ERROR: "); princ(e); break;
+  default: if (!consp(car(e))) return princ(e);;
+    return e=cdr(car(e)),eval(car(cdr(e)), bnd(car(e), r));
   }
+  
   return e;
 }
 
@@ -113,6 +117,8 @@ int main(int argc, char** argv) {
   lisp env= cons( cons( (lisp)0x1e3, mknum(999)),
 	    cons( cons( (lisp)0x1e7, mknum(666)),
                   nil));
+
+  //   ((lambda (x) (+ x x)) (* 3 4))     
 
   lisp x= nil;
   x= mknum(42);
